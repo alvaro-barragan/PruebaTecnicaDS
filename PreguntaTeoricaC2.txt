@@ -49,3 +49,13 @@ Extra:Al realizar el sistema, tenemos problema con los lagos y ríos, ya que los
             · Utilizar la información de la imagen satelital para determinar las dimensiones de las estructuras identificadas como piscinas
                 1- Utilizar la información de la imagen satelital (resolución, escala, etc.) para estimar las dimensiones reales de las piscinas identificadas.
                 
+Las métricas que se podrían utilizar para evaluar el rendimiento del sistema podrían ser:
+    · Precisión: Porcentaje de predicciones correctas realizadas por el sistema.
+    · Recall: Porcentaje de casos positivos que fueron identificados correctamente por el sistema.
+    · F1-score: Media armónica de la precisión y el recall, que proporciona una medida equilibrada del rendimiento del sistema.
+    · IoU (Intersection over Union): Métrica utilizada en la detección de objetos para evaluar la superposición entre las predicciones y las etiquetas reales. Esto permitiría evaluar la precisión de las detecciones de piscinas y casas en la imagen satelital.
+
+Para el caso extra de minimizar los falsos positivos de piscinas, se podrían utilizar las siguientes métricas adicionales:
+    ·Precisión: Verdaderos positivos / (Verdaderos positivos + Falsos positivos) minimiza los falsos positivos.
+    · Especificidad: Verdaderos negativos / (Verdaderos negativos + Falsos positivos) minimiza los falsos positivos.
+    
