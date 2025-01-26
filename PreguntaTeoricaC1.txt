@@ -1,0 +1,73 @@
+CASO 1:
+· Enunciado:
+    Usuario tiene un gran número de facturas hechas a mano. Necesita que se le desarrolle un servicio que digitalice esas facturas y devuelva un json con el identificador de cada campos y su valor.
+
+La idea que tengo a priori es dividir la solución en dos partes:
+    1. Segmentar la imagen en tantos segmentos como campos tenga la factura
+        1.1-PREPROCESAMIENTO: 
+            - En caso de no tener la imagen desde un punto de vista zenital, se podría aplicar una corrección de perspectiva por homografía para alinear la imagen y eliminar la disorsión de la perspectiva.
+        
+            - Binarizar la imagen entre pixeles en blanco y pixeles escritos, también se podría aplicar filtros para eliminar las líneas que pueda tener la factura que no aporten información o eliminar el ruido de la imagen promediando el entorno de cada pixel, por umbralización, etc.
+            -Si hay diferencias sustanciales (por ejemplo, diferentes colores) entre el texto de los campos y de los nombres de los campos, se podría aplicar un filtro para separar la información de cada tipo y simplificar los siguientes pasos.
+
+        1.2-SEGMENTACIÓN:
+        Analizar por eje y (filas):
+            ·Calcular la densidad de píxeles negros por fila en la imagen:
+                Para dividir la imagen en las coordenadas y en las que se hay texto escrito, se podría obtener la el total de pixeles escritos en cada coordenada 'y' de la imagen.
+            ·Identificar las áreas significativas (Estas áreas corresponden a zonas de texto). Posibles técnicas a utilizar para la identificación:
+                (Técnica Principal) DBSCAN: me parece la opción más sólida para este caso aunque requiere de ajustar los parámetros de distancia (epsilon) y el número mínimo de puntos para definir un clúster. Esta técnica permite identificar áreas densas de píxeles escritos y segmentar la imagen en bloques horizontales según las zonas con texto detectadas.
+                1- K-Means: en caso de saber el número de filas que buscamos, por lo que, realmente, no lo considero como una buena opción.
+                2- Histogramas de proyección: si no hay mucho ruido y los campos-textos están alineados. 
+                
+            ·Dividir la imagen en bloques horizontales según las zonas con texto detectadas.
+        Analizar por eje x (columnas):
+            En este paso, se podría aplicar el mismo proceso que en el análisis por eje y, pero en este caso, se analizaría cada subimagen generada en el anterior paso por separado y sería el análisis por columnas para dividir la imagen en bloques verticales según las zonas con texto detectadas. 
+        Con estos 2 pasos, se obtendrían los recuadros de cada campo de la factura.
+
+    2. Para cada segmento, aplicar un modelo de reconocimiento de texto manuscrito para obtener el texto de cada campo. 
+        2.1-RECONOCIMIENTO DE TEXTO:
+            - Se podría utilizar un modelo preentrenado de reconocimiento de texto manuscrito como microsoft/trocr-large-printed que es un TrOCR (Transformer OCR) preentrenado en grandes conjuntos de datos de texto manuscrito y que puede reconocer texto manuscrito en diferentes idiomas y estilos de escritura. El enlace a la documentación del modelo es: https://huggingface.co/microsoft/trocr-large-printed
+            Para este caso, sería necesario ajustar el input para asegurarse de que solo contiene una línea de texto por lo que habría que afinar la segmentación de la imagen para que cada segmento contenga solo una línea de texto.
+
+    A partir de conocer las coordenadas de cada campo y su contenido, se relacionaría cada nombre de campo encontrado (como clave del json) con el contenido de cada campo (como valor del json) para devolver el json con el identificador de cada campo y su valor.
+    Esta relación se hace a partir de la posición de cada campo en la imagen, ya que los contenidos de los campos suelen estar o en la misma fila inmediatamente a la derecha del nombre del campo o en la misma altura pero en la fila siguiente. El único caso en el que no pasa es en los productos listados en una factura, que suelen estar en columnas pero que estarían en filas consecutivas a la fila del nombre del campo.
+
+Para este sistema se pueden aplicar diferentes métricas para evaluar su rendimiento. Para la segmentación se pueden utilizar métricas genéricas como la precisión, el recall y el F1-score u otras métricas específicas para la segmentación de imágenes como el Intersection over Union (IoU), que compara las cajas predichas con las anotadas manualmente. Para el reconocimiento de texto, se pueden utilizar métricas como el Word Error Rate (WER-Proporción de palabras mal reconocidas sobre el total) o el Character Error Rate (CER-Proporción de caracteres mal reconocidos sobre el total) para evaluar la precisión del reconocimiento de texto. Además, se pueden realizar pruebas de extremo a extremo para evaluar el rendimiento general del sistema en la tarea de digitalización de facturas manuscritas.
+
+Si se quiere usar directamente un modelo ya entrenado para el análisis de la imagen de la factura, se podría utilizar un modelo como impira/layoutlm-document-qa que es un modelo LayoutLM preentrenado para la tarea de Question Answering en documentos estructurados (aunque para este caso en concreto, me parecería más util la primera solucion). Este modelo puede ser útil para extraer información de campos específicos en documentos como facturas, contratos, etc. El enlace a la documentación del modelo es: https://huggingface.co/impira/layoutlm-document-qa
+Para usar este modelo y conseguir un json, deberíamos tener una lista con los campos a buscar en la factura y aplicar el modelo para cada campo. Este modelo funciona especialmente bien con facturas pero tiene 2 problemas, que no ha sido entrenado con texto manuscrito y que ha sido entrenado con facturas en inglés por lo que si las facturas están en otro idioma funcionaría peor. En estos 2 casos, se podría hacer un fine-tuning del modelo con ejemplos en el idioma correspondiente y con texto manuscrito.
+
+
+Para valorar generalmente ambos sistemas propuestos, se podría comparar el rendimiento de ambos sistemas con métricas como Exact Match Accuracy, F1-score o el Token-level Accuracy.
+
+
+Otras soluciones posibles para la segmentación de la imagen de la factura:       
+            
+        1ª opción: 
+            Al ser un único formato de factura, se podría indicar directamente los campos a segmentar y las zonas donde se encuentran los campos a reconocer Lo que permitiría segmentar la imagen de forma precisa y obtener la imagen de cada campo para aplicar el modelo de reconocimiento de texto.
+        2ª opción:
+            También, otra opción sería, si cada campo de la factura está demarcado por recuadros, se podría utilizar un modelo de detección de objetos, como YOLO, para detectar los campos de la factura y segmentar la imagen en base a los recuadros detectados. 
+        4ª opción:
+            También se podría utilizar un modelo más avanzado y automatizado basado en:
+                · Redes neuronales convolucionales (CNN) para segmentar la imagen en campos de la factura.
+                · Modelos de visión avanzada como DETR (DEtection TRansformers) o ViT (Vision Transformers) para detectar los campos de la factura.
+
+        Una vez se tengan los recuadros donde se contienen el texto de cada campo hay 2 posibilidades, que el texto del campo se haya escrito en el mismo recuadro que el nombre del campo o que esten en campos separados pero contiguos. En ambas formas se pueden diferenciar por el tipo de letra ya que el nombre del campo se puede diferenciar del texto del campo por diferentes características como tamaño, color, fuente, texto estandarizado vs manuscrito, etc. O se puede buscar mismamente al principio de cada recuadro el nombre del campo para asignar el recuadro a un campo concreto. También hay que tener en cuenta que en campos con más de un elemento de respuesta, como la cantidad, descripcion, coste o importe de un producto estarán seguramente en columnas por lo que en esos casos no estan inmediatamente debajo del nombre del campo pero si de la fila anterior, por ejemplo.
+        SEGUNDA PARTE:
+            Para la segunda parte del problema, en la que se debe reconocer el texto manuscrito de cada campo segmentado, propondría el uso de modelos de reconocimiento de texto manuscrito.
+            En caso de que el texto esté torcido, se podría aplicar una corrección de inclinación de texto para alinear el texto y facilitar el reconocimiento. Pero en el caso de una factura, no creo que sea necesario ya que los campos suelen estar alineados y una mínima inclinación no afectaría al reconocimiento.
+            ·Selección de modelos avanzados de reconocimiento de texto:
+            Para un reconocimiento robusto del texto manuscrito, se puede utilizar un modelo preentrenado como TrOCR (Transformer OCR)
+            Entrenamiento o fine-tuning de modelos:
+
+            ·Fine-tuning del modelo (opcional): 
+            Si el texto manuscrito tiene características específicas, se podría ajustar el modelo preentrenado a través de fine-tuning con un dataset representativo. El dataset podrían ser de dominio general, como IAM o RIMES, o propios con textos manuscritos etiquetados. Esta opción sería más costosa y requeriría más tiempo y seguramente no sea necesario para reconocer los campos de una factura, pero si se quisiera mejorar el reconocimiento de texto manuscrito, sería una opción a tener en cuenta.
+
+            · Corrección posterior al reconocimiento:
+            Para mejorar la precisión del reconocimiento, sobre todo en casos como números, fechas u otros carácteres no alfabéticos, se podría aplicar un postprocesamiento para corregir errores de reconocimiento conforme al contexto de la factura (como podría ser GPT-3) o, incluso, reglas de regex para fechas y asegurar la coherencia de los datos extraídos.
+
+De las 4 opciones de segmentación, la primera opción mostrada es robusta y flexible, especialmente adecuada para escenarios en los que no se dispone de un dataset anotado y el diseño de las facturas es uniforme. Por otro lado, la 4ª opción, basada en aprendizaje profundo con redes neuronales convolucionales (CNNs) y modelos avanzados como DETR o Vision Transformers, es la más avanzada y escalable. Esta opción es ideal para manejar múltiples formatos o estructuras complejas, pero requiere la disponibilidad de un dataset anotado para su entrenamiento, lo que puede aumentar los costos iniciales. Sin embargo, si se cuenta con los recursos necesarios para crear o adquirir dicho dataset, la 4ª opción ofrece una solución automatizada y altamente adaptable que supera en precisión y capacidad de generalización a las alternativas tradicionales.
+
+Ampliaciones:
+    · En caso de que las facturas tengan un unico formato, para la segmentación de la imagen en vez de utilizar una sola factura, se podrían utilizar varias facturas para entrenar un modelo de segmentación de campos de la factura. Así se conseguiría tener las zonas de las facturas en las que se escribe cada campo y poder segmentar la imagen conforme a dichas zonas sin necesidad de análisis previo al tener segmentos más generales. 
+    · En caso de que haya varios formatos y se sepa el número de formatos diferentes, se puede usar algún formato de clusterización como K-Means para clasificarlos por formatos o una vez se haya detectado los diferentes formatos, usar knn para clasificarlos a partir de las facturas ya clasificadas
