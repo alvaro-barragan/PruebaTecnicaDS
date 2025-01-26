@@ -1,0 +1,51 @@
+CASO 2:
+    Usuario necesita un sistema que, haciendo uso de imágenes satelitales compruebe si la dirección tiene casa y si tiene casa, que devuelva si en esa dirección hay piscina y el tamaño de la misma. Podemos suponer que hay una imagen con cada dirección posible.
+
+Modelo ya entrenado para reconocimiento de edificios (en este caso me parece la solución optima para reconocer casas en la imagen satelital):
+    https://huggingface.co/Yifeng-Liu/rt-detr-finetuned-for-satellite-image-roofs-detection
+Para reconocer piscinas en la imagen satelital:
+    https://huggingface.co/hustvl/yolos-tiny 
+    Este segundo modelo es menos especifico que el primero, pero con un buen fine-tuning podría ser capaz de reconocer piscinas e incluso casas en la imagen satelital.
+Otra posible solución:
+    De primeras se me ocurre que se podría abordar el problema de la siguiente manera:
+        1. Preprocesamiento y detección de bordes:
+            · Preprocesamiento de la imagen satelital para mejorar la calidad y reducir el ruido.
+                1- Convertir la imagen a escala de grises para simplificar el procesamiento.
+                2- Suavizar la imagen con un filtro Gaussiano para eliminar ruido.
+            · Detección de bordes para identificar los límites de las estructuras presentes en la imagen.
+                (Se podría utilizar un algoritmo de detección de bordes como Canny para resaltar los bordes de las estructuras presentes en la imagen).
+        2. identificación de Regiones de Interés (ROI):
+            · Segmentación de la imagen en regiones de interés para aislar las áreas que contienen las casas y piscinas.
+                1- Aplicar un algoritmo de segmentación de imágenes para dividir la imagen en regiones con características similares.
+                2- Identificar las regiones que contienen estructuras que se asemejan a casas.
+                3- Identificar las regiones que contienen estructuras que se asemejan a piscinas.
+                Las piscinas sulen tener una forma rectangular o circular, pero con bordes definidos, además de que su interior suele ser de un color azul claro sin mucho ruido, por lo que se podría utilizar un algoritmo de detección de contornos para identificar las piscinas.
+        3. Clasificación de las estructuras:
+            · Utilizar un modelo de detección de objetos para clasificar las estructuras identificadas como casas y piscinas.
+                1- Utilizar un modelo pre-entrenado para la detección de edificios en imágenes satelitales para identificar las casas. Por ejemplo, se podría utilizar un modelo DETR para la detección de edificios.
+                2- Utilizar un modelo pre-entrenado para la detección de objetos en imágenes satelitales para identificar las piscinas.Por ejemplo, se podría utilizar un modelo YOLO para la detección de piscinas.
+        4. Extracción de información:
+            · Extraer la información relevante de las estructuras identificadas.
+                1- Determinar si la dirección tiene casa o no.
+                2- Determinar si la dirección tiene piscina o no.
+                3- Determinar el tamaño de la piscina si se encuentra presente.
+
+Extra:Al realizar el sistema, tenemos problema con los lagos y ríos, ya que los confunde con piscinas, qué solución plantearías para minimizar el impacto de estas masas de agua y evitar falsos positivos de piscinas?
+
+    Una posible solución para minimizar el impacto de los lagos y ríos y evitar falsos positivos de piscinas podría ser la siguiente:
+        1. Identificación de características distintivas:
+            · Identificar las características distintivas de las piscinas y los cuerpos de agua (lagos, ríos, etc.).
+                1- Las piscinas suelen tener una forma rectangular o circular con bordes definidos, mientras que los cuerpos de agua naturales como los lagos y ríos suelen tener formas irregulares y bordes más suaves. Además, los bordes de las piscinas suelen ser uniformes y bien definidos, mientras que los cuerpos de agua naturales pueden tener bordes más difusos. Para aprovechar estas diferencias, se podría utilizar un algoritmo de detección de bordes (Canny, por ejemplo) para identificar las piscinas en base a sus bordes definidos.
+                2- Las piscinas suelen tener un color azul claro y uniforme, mientras que los cuerpos de agua naturales pueden tener diferentes tonalidades de azul, verde o marrón. Para aprovechar la monocromía de las piscinas.
+        2. Filtrado de regiones de interés:
+            · Filtrar las regiones de interés identificadas para eliminar los cuerpos de agua naturales.
+                1- Utilizar un algoritmo de clasificación para distinguir entre piscinas y cuerpos de agua naturales.
+                2- Descartar las regiones que se identifiquen como cuerpos de agua naturales y conservar solo las que se identifiquen como piscinas.
+        3. Ajuste de los modelos de detección:
+            · Ajustar los modelos de detección de objetos para mejorar la precisión en la identificación de piscinas.
+                1- Realizar un fine-tuning de los modelos de detección de objetos para mejorar su capacidad de distinguir entre piscinas y cuerpos de agua naturales.
+                2- Utilizar técnicas de aumento de datos para enriquecer el conjunto de datos de entrenamiento y mejorar la capacidad de generalización de los modelos.
+        4. Dimensionalidad:
+            · Utilizar la información de la imagen satelital para determinar las dimensiones de las estructuras identificadas como piscinas
+                1- Utilizar la información de la imagen satelital (resolución, escala, etc.) para estimar las dimensiones reales de las piscinas identificadas.
+                
